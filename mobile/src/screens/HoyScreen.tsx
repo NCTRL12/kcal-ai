@@ -7,9 +7,11 @@ import { useNavigation } from '@react-navigation/native';
 
 import { RootStackParamList } from '../../App';
 import { useApp } from '../state/AppContext';
-import { colors, font } from '../theme/theme';
+import { colors, font, radius } from '../theme/theme';
 import { findFood } from '../lib/nutrition';
 import { useSectionNav } from '../state/SectionNav';
+import { WaterCard } from '../components/WaterCard';
+import { FastingCard } from '../components/FastingCard';
 
 const R = 52;
 const CIRCUMFERENCE = 2 * Math.PI * R;
@@ -46,9 +48,16 @@ export default function HoyScreen() {
             <Text style={styles.dateLabel}>Hoy</Text>
             <Text style={styles.h1}>Hoy</Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.objLabel}>Objetivo</Text>
-            <Text style={styles.objValue}>{P.kcal.toLocaleString('es-ES')} kcal</Text>
+          <View style={{ alignItems: 'flex-end', gap: 6 }}>
+            <View>
+              <Text style={styles.objLabel}>Objetivo</Text>
+              <Text style={styles.objValue}>{P.kcal.toLocaleString('es-ES')} kcal</Text>
+            </View>
+            {app.streak > 0 && (
+              <View style={styles.streakPill}>
+                <Text style={styles.streakText}>Racha · {app.streak} {app.streak === 1 ? 'día' : 'días'}</Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -101,6 +110,25 @@ export default function HoyScreen() {
           <Text style={{ fontSize: 18, color: colors.black }}>→</Text>
         </Pressable>
 
+        <View style={{ gap: 10 }}>
+          <WaterCard glasses={app.todayWater} onAdd={app.addWater} />
+          <FastingCard fasting={app.fasting} onStart={app.startFasting} onStop={app.stopFasting} />
+        </View>
+
+        {app.favorites.length > 0 && (
+          <View style={{ gap: 10 }}>
+            <Text style={styles.sectionTitle}>Favoritos</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              {app.favorites.map((fav) => (
+                <Pressable key={fav.id} onPress={() => app.addFavoriteToDiary(fav)} style={styles.favChip}>
+                  <Text style={styles.favChipName} numberOfLines={1}>{fav.name}</Text>
+                  <Text style={styles.favChipKcal}>{fav.kcal} kcal</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <Pressable onPress={() => section.goTo('IA')} style={styles.nudgeRow}>
           <View style={styles.iaBadge}>
             <Text style={{ fontSize: 10, fontFamily: font.bold, color: colors.black }}>IA</Text>
@@ -115,8 +143,13 @@ export default function HoyScreen() {
             <Text style={styles.sectionTitle}>Comidas de hoy</Text>
             <Text style={styles.sectionMeta}>{consumido.toLocaleString('es-ES')} kcal</Text>
           </View>
-          {app.meals.map((meal, i) => (
-            <View key={i} style={styles.mealRow}>
+          {app.meals.length > 0 && <Text style={styles.favHint}>Mantén pulsada una comida para guardarla como favorita.</Text>}
+          {app.meals.map((meal) => (
+            <Pressable
+              key={meal.id}
+              onLongPress={() => app.addFavorite({ slot: meal.slot, name: meal.name, kcal: meal.kcal, macroText: meal.macroText })}
+              style={styles.mealRow}
+            >
               <View style={styles.mealSlot}>
                 <Text style={styles.mealSlotText}>{meal.slot}</Text>
               </View>
@@ -125,7 +158,7 @@ export default function HoyScreen() {
                 <Text style={styles.mealMacro}>{meal.macroText}</Text>
               </View>
               <Text style={styles.mealKcal}>{meal.kcal}</Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
@@ -150,6 +183,12 @@ const styles = StyleSheet.create({
   h1: { fontSize: 27, fontFamily: font.semibold, letterSpacing: -0.6, color: colors.black },
   objLabel: { fontSize: 11.5, color: colors.textMuted, fontFamily: font.regular },
   objValue: { fontSize: 14, fontFamily: font.semibold, color: colors.black },
+  streakPill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: colors.lime },
+  streakText: { fontSize: 10.5, fontFamily: font.semibold, color: colors.black },
+  favChip: { padding: 12, borderRadius: 14, backgroundColor: colors.fillSoft, minWidth: 130, maxWidth: 160 },
+  favChipName: { fontSize: 13, fontFamily: font.medium, color: colors.black },
+  favChipKcal: { fontSize: 11, color: colors.textFaint, marginTop: 3, fontFamily: font.regular },
+  favHint: { fontSize: 11, color: colors.textFaint, marginBottom: 4, fontFamily: font.regular },
   ringRow: { flexDirection: 'row', alignItems: 'center', gap: 22 },
   ringWrap: { width: 150, height: 150 },
   ringCenter: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', gap: 2 },

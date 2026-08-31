@@ -11,6 +11,7 @@ export function AiSettingsModal({ visible, onClose }: { visible: boolean; onClos
   const app = useApp();
   const [baseUrl, setBaseUrl] = useState(app.aiSettings.baseUrl);
   const [model, setModel] = useState(app.aiSettings.model);
+  const [visionModel, setVisionModel] = useState(app.aiSettings.visionModel || 'llava');
   const [checking, setChecking] = useState(false);
   const [status, setStatus] = useState<'idle' | 'ok' | 'fail'>('idle');
 
@@ -18,6 +19,7 @@ export function AiSettingsModal({ visible, onClose }: { visible: boolean; onClos
     if (visible) {
       setBaseUrl(app.aiSettings.baseUrl);
       setModel(app.aiSettings.model);
+      setVisionModel(app.aiSettings.visionModel || 'llava');
       setStatus('idle');
     }
   }, [visible]);
@@ -30,12 +32,12 @@ export function AiSettingsModal({ visible, onClose }: { visible: boolean; onClos
   };
 
   const save = () => {
-    app.setAiSettings({ baseUrl: baseUrl.trim(), model: model.trim() || 'llama3.1' });
+    app.setAiSettings({ baseUrl: baseUrl.trim(), model: model.trim() || 'llama3.1', visionModel: visionModel.trim() || 'llava' });
     onClose();
   };
 
   const clear = () => {
-    app.setAiSettings({ baseUrl: '', model: model.trim() || 'llama3.1' });
+    app.setAiSettings({ baseUrl: '', model: model.trim() || 'llama3.1', visionModel: visionModel.trim() || 'llava' });
     setBaseUrl('');
     onClose();
   };
@@ -65,7 +67,7 @@ export function AiSettingsModal({ visible, onClose }: { visible: boolean; onClos
           </View>
 
           <View style={{ gap: 6 }}>
-            <Text style={styles.label}>Modelo</Text>
+            <Text style={styles.label}>Modelo (chat)</Text>
             <TextInput
               value={model}
               onChangeText={setModel}
@@ -75,6 +77,20 @@ export function AiSettingsModal({ visible, onClose }: { visible: boolean; onClos
               autoCorrect={false}
               style={styles.input}
             />
+          </View>
+
+          <View style={{ gap: 6 }}>
+            <Text style={styles.label}>Modelo con visión (para fotos de comida)</Text>
+            <TextInput
+              value={visionModel}
+              onChangeText={setVisionModel}
+              placeholder="llava"
+              placeholderTextColor={colors.textFaint}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={styles.input}
+            />
+            <Text style={styles.body}>Instálalo con <Text style={styles.mono}>ollama pull llava</Text> (o qwen2.5vl) para que el escaneo de fotos sea real.</Text>
           </View>
 
           {status !== 'idle' && (

@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BuiltMeal,
@@ -12,8 +12,17 @@ import {
 } from '../lib/nutrition';
 import { AssistantAction, runAssistant } from '../lib/ai';
 import { AiSettings, DEFAULT_AI_SETTINGS } from '../lib/ollama';
-
+import {
+  DEFAULT_FASTING,
+  DailyLogs,
+  FastingState,
+  FavoriteMeal,
+  LoggedMeal,
+  computeStreak,
+  todayKey,
+} from '../lib/log';
 const AI_SETTINGS_KEY = '@kcalai/ai-settings';
+const APP_STATE_KEY = '@kcalai/state';
 
 export interface ChatMessage {
   id: string;
@@ -25,21 +34,34 @@ export interface ChatMessage {
   addedToDiary?: boolean;
 }
 
-interface AppState {
+interface PersistedState {
   profile: Profile;
   likes: string[];
   dislikes: string[];
   extraDislikes: string[];
   diets: Diet[];
-  meals: Meal[];
+  dailyLogs: DailyLogs;
+  favorites: FavoriteMeal[];
+  water: Record<string, number>;
+  fasting: FastingState;
+  weightLog: Record<string, number>;
+  planReady: boolean;
+  remindersEnabled: boolean;
+}
+
+interface AppState extends PersistedState {
   chat: ChatMessage[];
   draft: string;
   iaThinking: boolean;
-  planReady: boolean;
+  hydrated: boolean;
 }
 
 interface AppApi extends AppState {
   plan: ReturnType<typeof computePlan>;
+  meals: LoggedMeal[];
+  streak: number;
+  water: Record<string, number>;
+  todayWater: number;
   setProfileField: (key: keyof Profile, value: string) => void;
   setSexo: (sexo: Sexo) => void;
   setAct: (act: number) => void;
@@ -55,6 +77,15 @@ interface AppApi extends AppState {
   sendMessage: (text?: string) => Promise<void>;
   aiSettings: AiSettings;
   setAiSettings: (settings: AiSettings) => void;
+  addFavorite: (meal: { slot: Meal['slot']; name: string; kcal: number; macroText: string }) => void;
+  removeFavorite: (id: string) => void;
+  addFavoriteToDiary: (fav: FavoriteMeal) => void;
+  addWater: (delta: number) => void;
+  startFasting: (windowHours: number) => void;
+  stopFasting: () => void;
+  logWeight: (kg: number) => void;
+  remindersEnabled: boolean;
+  setRemindersEnabled: (on: boolean) => void;
 }
 
 const defaultProfile: Profile = {
@@ -69,17 +100,33 @@ const defaultProfile: Profile = {
   kcalDelta: 0,
 };
 
-const initialState: AppState = {
+function seedMeal(slot: Meal['slot'], name: string, kcal: number, macroText: string, idx: number): LoggedMeal {
+  return { slot, name, kcal, macroText, id: `seed_${idx}`, loggedAt: Date.now() - (3 - idx) * 3600_000 };
+}
+
+const initialPersisted: PersistedState = {
   profile: defaultProfile,
   likes: ['pollo', 'arroz', 'huevos', 'aguacate', 'avena', 'yogur'],
   dislikes: ['lentejas'],
   extraDislikes: [],
   diets: [],
-  meals: [
-    { slot: 'Desayuno', name: 'Avena, plátano y whey', kcal: 520, macroText: '38 P · 72 C · 9 G' },
-    { slot: 'Comida', name: 'Salmón con quinoa', kcal: 640, macroText: '44 P · 55 C · 24 G' },
-    { slot: 'Snack', name: 'Yogur griego y nueces', kcal: 310, macroText: '24 P · 14 C · 17 G' },
-  ],
+  dailyLogs: {
+    [todayKey()]: [
+      seedMeal('Desayuno', 'Avena, plátano y whey', 520, '38 P · 72 C · 9 G', 0),
+      seedMeal('Comida', 'Salmón con quinoa', 640, '44 P · 55 C · 24 G', 1),
+      seedMeal('Snack', 'Yogur griego y nueces', 310, '24 P · 14 C · 17 G', 2),
+    ],
+  },
+  favorites: [],
+  water: {},
+  fasting: DEFAULT_FASTING,
+  weightLog: {},
+  planReady: false,
+  remindersEnabled: false,
+};
+
+const initialState: AppState = {
+  ...initialPersisted,
   chat: [
     {
       id: 'welcome',
@@ -89,7 +136,7 @@ const initialState: AppState = {
   ],
   draft: '',
   iaThinking: false,
-  planReady: false,
+  hydrated: false,
 };
 
 const AppCtx = createContext<AppApi | null>(null);
@@ -101,17 +148,61 @@ function macroTextFor(kcal: number, protein: number) {
   return `${protein} P · ${Math.round((kcal * 0.4) / 4)} C · ${Math.round((kcal * 0.25) / 9)} G`;
 }
 
+function toPersisted(s: AppState): PersistedState {
+  const {
+    profile, likes, dislikes, extraDislikes, diets, dailyLogs, favorites, water, fasting, weightLog, planReady, remindersEnabled,
+  } = s;
+  return { profile, likes, dislikes, extraDislikes, diets, dailyLogs, favorites, water, fasting, weightLog, planReady, remindersEnabled };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
   const [aiSettings, setAiSettingsState] = useState<AiSettings>(DEFAULT_AI_SETTINGS);
+  const loadedOnce = useRef(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(AI_SETTINGS_KEY)
-      .then((raw) => {
-        if (raw) setAiSettingsState(JSON.parse(raw));
-      })
-      .catch(() => {});
+    (async () => {
+      try {
+        const [rawAi, rawState] = await Promise.all([
+          AsyncStorage.getItem(AI_SETTINGS_KEY),
+          AsyncStorage.getItem(APP_STATE_KEY),
+        ]);
+        if (rawAi) setAiSettingsState(JSON.parse(rawAi));
+        if (rawState) {
+          const persisted: PersistedState = JSON.parse(rawState);
+          setState((s) => ({ ...s, ...persisted, hydrated: true }));
+        } else {
+          setState((s) => ({ ...s, hydrated: true }));
+        }
+      } catch {
+        setState((s) => ({ ...s, hydrated: true }));
+      }
+    })();
   }, []);
+
+  useEffect(() => {
+    if (!state.hydrated) return;
+    if (!loadedOnce.current) {
+      loadedOnce.current = true;
+      return;
+    }
+    AsyncStorage.setItem(APP_STATE_KEY, JSON.stringify(toPersisted(state))).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    state.hydrated,
+    state.profile,
+    state.likes,
+    state.dislikes,
+    state.extraDislikes,
+    state.diets,
+    state.dailyLogs,
+    state.favorites,
+    state.water,
+    state.fasting,
+    state.weightLog,
+    state.planReady,
+    state.remindersEnabled,
+  ]);
 
   const setAiSettings = useCallback((settings: AiSettings) => {
     setAiSettingsState(settings);
@@ -119,6 +210,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const plan = useMemo(() => computePlan(state.profile), [state.profile]);
+  const meals = state.dailyLogs[todayKey()] || [];
+  const streak = useMemo(() => computeStreak(state.dailyLogs), [state.dailyLogs]);
+  const todayWater = state.water[todayKey()] || 0;
 
   const setProfileField = useCallback((key: keyof Profile, value: string) => {
     setState((s) => ({ ...s, profile: { ...s.profile, [key]: value } }));
@@ -151,15 +245,71 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const completePlan = useCallback(() => setState((s) => ({ ...s, planReady: true })), []);
 
-  const addMeal = useCallback((meal: Meal) => {
-    setState((s) => ({ ...s, meals: [...s.meals, meal] }));
+  const pushMealToday = useCallback((meal: Meal, s: AppState): DailyLogs => {
+    const key = todayKey();
+    const logged: LoggedMeal = { ...meal, id: nextId(), loggedAt: Date.now() };
+    return { ...s.dailyLogs, [key]: [...(s.dailyLogs[key] || []), logged] };
   }, []);
 
-  const addBuiltMeal = useCallback((meal: BuiltMeal) => {
+  const addMeal = useCallback(
+    (meal: Meal) => setState((s) => ({ ...s, dailyLogs: pushMealToday(meal, s) })),
+    [pushMealToday]
+  );
+
+  const addBuiltMeal = useCallback(
+    (meal: BuiltMeal) =>
+      setState((s) => ({
+        ...s,
+        dailyLogs: pushMealToday({ slot: meal.slot, name: meal.name, kcal: meal.kcal, macroText: macroTextFor(meal.kcal, meal.p) }, s),
+      })),
+    [pushMealToday]
+  );
+
+  const addFavorite = useCallback((meal: { slot: Meal['slot']; name: string; kcal: number; macroText: string }) => {
+    setState((s) => {
+      if (s.favorites.some((f) => f.name === meal.name && f.kcal === meal.kcal)) return s;
+      return { ...s, favorites: [...s.favorites, { id: nextId(), ...meal }] };
+    });
+  }, []);
+
+  const removeFavorite = useCallback((id: string) => {
+    setState((s) => ({ ...s, favorites: s.favorites.filter((f) => f.id !== id) }));
+  }, []);
+
+  const addFavoriteToDiary = useCallback(
+    (fav: FavoriteMeal) =>
+      setState((s) => ({ ...s, dailyLogs: pushMealToday({ slot: fav.slot, name: fav.name, kcal: fav.kcal, macroText: fav.macroText }, s) })),
+    [pushMealToday]
+  );
+
+  const addWater = useCallback((delta: number) => {
+    setState((s) => {
+      const key = todayKey();
+      const next = Math.max(0, (s.water[key] || 0) + delta);
+      return { ...s, water: { ...s.water, [key]: next } };
+    });
+  }, []);
+
+  const startFasting = useCallback((windowHours: number) => {
+    setState((s) => ({ ...s, fasting: { active: true, startedAt: Date.now(), windowHours } }));
+  }, []);
+  const stopFasting = useCallback(() => {
+    setState((s) => ({ ...s, fasting: { ...s.fasting, active: false, startedAt: null } }));
+  }, []);
+
+  const logWeight = useCallback((kg: number) => {
     setState((s) => ({
       ...s,
-      meals: [...s.meals, { slot: meal.slot, name: meal.name, kcal: meal.kcal, macroText: macroTextFor(meal.kcal, meal.p) }],
+      weightLog: { ...s.weightLog, [todayKey()]: kg },
+      profile: { ...s.profile, peso: String(kg) },
     }));
+  }, []);
+
+  // Pure state — the actual OS notification scheduling (with its permission
+  // prompt) is owned by the screen that toggles this, so it can surface a
+  // clear error if the permission is denied instead of failing silently.
+  const setRemindersEnabled = useCallback((on: boolean) => {
+    setState((s) => ({ ...s, remindersEnabled: on }));
   }, []);
 
   const setDraft = useCallback((text: string) => setState((s) => ({ ...s, draft: text })), []);
@@ -191,20 +341,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return {}; // rendered as a card in the chat message itself
       case 'registrar_comida':
         return {
-          meals: [
-            ...s.meals,
-            {
-              slot: action.meal.slot,
-              name: action.meal.name,
-              kcal: action.meal.kcal,
-              macroText: macroTextFor(action.meal.kcal, action.meal.p),
-            },
-          ],
+          dailyLogs: pushMealToday(
+            { slot: action.meal.slot, name: action.meal.name, kcal: action.meal.kcal, macroText: macroTextFor(action.meal.kcal, action.meal.p) },
+            s
+          ),
         };
       default:
         return {};
     }
-  }, []);
+  }, [pushMealToday]);
 
   const changeReceiptFor = (action: AssistantAction, s: AppState): string | null => {
     switch (action.type) {
@@ -250,7 +395,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           dislikes: ctxSnapshot.dislikes,
           extraDislikes: ctxSnapshot.extraDislikes,
           diets: ctxSnapshot.diets,
-          meals: ctxSnapshot.meals,
+          meals: ctxSnapshot.dailyLogs[todayKey()] || [],
           plan: computePlan(ctxSnapshot.profile),
         },
         aiSettings
@@ -281,6 +426,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const value: AppApi = {
     ...state,
     plan,
+    meals,
+    streak,
+    todayWater,
     setProfileField,
     setSexo,
     setAct,
@@ -296,6 +444,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     sendMessage,
     aiSettings,
     setAiSettings,
+    addFavorite,
+    removeFavorite,
+    addFavoriteToDiary,
+    addWater,
+    startFasting,
+    stopFasting,
+    logWeight,
+    remindersEnabled: state.remindersEnabled,
+    setRemindersEnabled,
   };
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

@@ -33,6 +33,12 @@
         {
           "cameraPermission": "Kcal AI usa la cámara para estimar las calorías y macros de tu comida a partir de una foto."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#E8F982"
+        }
       ]
     ]
   }

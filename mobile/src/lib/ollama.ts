@@ -14,13 +14,15 @@ import type { AssistantAction, AssistantContext, AssistantResult } from './ai';
 export interface AiSettings {
   baseUrl: string; // e.g. http://192.168.1.42:11434
   model: string; // e.g. llama3.1
+  visionModel?: string; // e.g. llava, qwen2.5vl — used for photo scan recognition
 }
 
-export const DEFAULT_AI_SETTINGS: AiSettings = { baseUrl: '', model: 'llama3.1' };
+export const DEFAULT_AI_SETTINGS: AiSettings = { baseUrl: '', model: 'llama3.1', visionModel: 'llava' };
 
 interface OllamaMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  images?: string[];
   tool_calls?: { function: { name: string; arguments: Record<string, unknown> } }[];
 }
 
@@ -147,7 +149,13 @@ function buildSystemPrompt(ctx: AssistantContext): string {
   ].join('\n\n');
 }
 
-async function ollamaChat(settings: AiSettings, messages: OllamaMessage[], withTools: boolean, timeoutMs = 20000) {
+async function ollamaChat(
+  settings: AiSettings,
+  messages: OllamaMessage[],
+  withTools: boolean,
+  timeoutMs = 20000,
+  modelOverride?: string
+) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -155,7 +163,7 @@ async function ollamaChat(settings: AiSettings, messages: OllamaMessage[], withT
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: settings.model,
+        model: modelOverride || settings.model,
         messages,
         stream: false,
         ...(withTools ? { tools: TOOL_SPECS } : {}),
@@ -249,6 +257,54 @@ export async function generatePlanNote(prompt: string, settings: AiSettings): Pr
       15000
     );
     return (message.content || '').trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+export interface VisionResult {
+  name: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  items: { name: string; qty: string }[];
+}
+
+/** Sends a captured photo (base64, no data: prefix) to a vision-capable local
+ * model (e.g. llava, qwen2.5vl) and parses its kcal/macro estimate. Returns
+ * null on any failure so callers can fall back to the simulated result. */
+export async function recognizeFoodPhoto(base64: string, settings: AiSettings): Promise<VisionResult | null> {
+  try {
+    const message = await ollamaChat(
+      settings,
+      [
+        {
+          role: 'system',
+          content:
+            'Eres un nutricionista identificando comida en fotos. Responde ÚNICAMENTE con JSON válido, sin texto ni markdown alrededor, con esta forma exacta: {"name":"nombre del plato","kcal":numero,"protein":numero,"carbs":numero,"fat":numero,"items":[{"name":"ingrediente","qty":"cantidad"}]}. Estima con tu mejor criterio a partir de la imagen; los números son kcal y gramos totales del plato.',
+        },
+        { role: 'user', content: 'Identifica esta comida y estima sus calorías y macros.', images: [base64] },
+      ],
+      false,
+      45000,
+      settings.visionModel || settings.model
+    );
+    const text = (message.content || '').trim();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return null;
+    const parsed = JSON.parse(jsonMatch[0]);
+    if (typeof parsed.kcal !== 'number') return null;
+    return {
+      name: String(parsed.name || 'Comida detectada'),
+      kcal: Math.round(parsed.kcal),
+      protein: Math.round(parsed.protein || 0),
+      carbs: Math.round(parsed.carbs || 0),
+      fat: Math.round(parsed.fat || 0),
+      items: Array.isArray(parsed.items)
+        ? parsed.items.map((it: any) => ({ name: String(it.name || ''), qty: String(it.qty || '') }))
+        : [],
+    };
   } catch {
     return null;
   }
