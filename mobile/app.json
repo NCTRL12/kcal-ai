@@ -2,22 +2,27 @@
   "expo": {
     "name": "Kcal AI",
     "slug": "kcal-ai",
+    "description": "Contador de calorías por foto y código de barras, con un asistente de IA local y gratuito.",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "kcalai",
+    "primaryColor": "#E8F982",
+    "backgroundColor": "#111111",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kcalai.app",
+      "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Kcal AI usa la cámara para estimar las calorías y macros de tu comida a partir de una foto."
       }
     },
     "android": {
       "package": "com.kcalai.app",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#111111",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
