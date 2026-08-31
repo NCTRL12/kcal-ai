@@ -2,25 +2,22 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Rect } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { CompositeScreenProps } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 
-import { MainTabParamList, RootStackParamList } from '../../App';
+import { RootStackParamList } from '../../App';
 import { useApp } from '../state/AppContext';
 import { colors, font } from '../theme/theme';
 import { findFood } from '../lib/nutrition';
-
-type Props = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'Hoy'>,
-  NativeStackScreenProps<RootStackParamList>
->;
+import { useSectionNav } from '../state/SectionNav';
 
 const R = 52;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
-export default function HoyScreen({ navigation }: Props) {
+export default function HoyScreen() {
   const app = useApp();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const section = useSectionNav();
   const P = app.plan;
   const consumido = app.meals.reduce((t, m) => t + m.kcal, 0);
   const restante = Math.max(0, P.kcal - consumido);
@@ -104,7 +101,7 @@ export default function HoyScreen({ navigation }: Props) {
           <Text style={{ fontSize: 18, color: colors.black }}>→</Text>
         </Pressable>
 
-        <Pressable onPress={() => navigation.navigate('IA')} style={styles.nudgeRow}>
+        <Pressable onPress={() => section.goTo('IA')} style={styles.nudgeRow}>
           <View style={styles.iaBadge}>
             <Text style={{ fontSize: 10, fontFamily: font.bold, color: colors.black }}>IA</Text>
           </View>

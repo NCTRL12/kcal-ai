@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { useApp } from '../state/AppContext';
 import { colors, font, radius } from '../theme/theme';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ACT_LABELS, DIETS, FOODS, Goal, RITMOS, goalNote } from '../lib/nutrition';
+import { generatePlanNote } from '../lib/ollama';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Plan'>;
 
@@ -230,12 +231,44 @@ function StepPreferences() {
 function StepResult() {
   const app = useApp();
   const P = app.plan;
-  const note = goalNote(app.profile, P);
+  const fallbackNote = goalNote(app.profile, P);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const connected = !!app.aiSettings.baseUrl;
+
+  useEffect(() => {
+    if (!connected || app.profile.goal !== 'custom' || !app.profile.customGoal) {
+      setAiNote(null);
+      return;
+    }
+    let cancelled = false;
+    setAiLoading(true);
+    const prompt = [
+      `Objetivo del usuario, en sus palabras: "${app.profile.customGoal}"`,
+      `Plan calculado: ${P.kcal} kcal/día, ${P.prot} g proteína, ${P.carb} g carbos, ${P.fat} g grasas (gasto estimado ${P.tdee} kcal).`,
+      'Explícale en 2-3 frases cómo este plan encaja con lo que ha pedido.',
+    ].join('\n');
+    generatePlanNote(prompt, app.aiSettings).then((text) => {
+      if (!cancelled) {
+        setAiNote(text);
+        setAiLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, app.profile.goal, app.profile.customGoal, P.kcal]);
+
+  const note = aiNote || fallbackNote;
+
   return (
     <View style={{ gap: 20 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
         <View style={styles.pulseDot} />
-        <Text style={{ fontSize: 12.5, color: colors.textMuted, fontFamily: font.regular }}>Calculado por la IA con tus datos</Text>
+        <Text style={{ fontSize: 12.5, color: colors.textMuted, fontFamily: font.regular }}>
+          {aiLoading ? 'Tu modelo local está redactando la explicación…' : connected ? 'Calculado con tu modelo local' : 'Calculado por la IA con tus datos'}
+        </Text>
       </View>
       <Text style={styles.h1}>Tu plan diario</Text>
       <View style={styles.planCard}>

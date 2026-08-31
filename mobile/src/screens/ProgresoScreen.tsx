@@ -2,23 +2,18 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Svg, { Polygon, Polyline } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { CompositeScreenProps } from '@react-navigation/native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 
-import { MainTabParamList, RootStackParamList } from '../../App';
+import { RootStackParamList } from '../../App';
 import { useApp } from '../state/AppContext';
 import { colors, font, radius } from '../theme/theme';
 
-type Props = CompositeScreenProps<
-  BottomTabScreenProps<MainTabParamList, 'Progreso'>,
-  NativeStackScreenProps<RootStackParamList>
->;
-
 const DIAS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
-export default function ProgresoScreen({ navigation }: Props) {
+export default function ProgresoScreen() {
   const app = useApp();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const P = app.plan;
   const consumido = app.meals.reduce((t, m) => t + m.kcal, 0);
 

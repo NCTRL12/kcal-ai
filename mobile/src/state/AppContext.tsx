@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   BuiltMeal,
   Diet,
@@ -10,6 +11,9 @@ import {
   findFood,
 } from '../lib/nutrition';
 import { AssistantAction, runAssistant } from '../lib/ai';
+import { AiSettings, DEFAULT_AI_SETTINGS } from '../lib/ollama';
+
+const AI_SETTINGS_KEY = '@kcalai/ai-settings';
 
 export interface ChatMessage {
   id: string;
@@ -49,6 +53,8 @@ interface AppApi extends AppState {
   addBuiltMeal: (meal: BuiltMeal) => void;
   setDraft: (text: string) => void;
   sendMessage: (text?: string) => Promise<void>;
+  aiSettings: AiSettings;
+  setAiSettings: (settings: AiSettings) => void;
 }
 
 const defaultProfile: Profile = {
@@ -97,6 +103,20 @@ function macroTextFor(kcal: number, protein: number) {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AppState>(initialState);
+  const [aiSettings, setAiSettingsState] = useState<AiSettings>(DEFAULT_AI_SETTINGS);
+
+  useEffect(() => {
+    AsyncStorage.getItem(AI_SETTINGS_KEY)
+      .then((raw) => {
+        if (raw) setAiSettingsState(JSON.parse(raw));
+      })
+      .catch(() => {});
+  }, []);
+
+  const setAiSettings = useCallback((settings: AiSettings) => {
+    setAiSettingsState(settings);
+    AsyncStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(settings)).catch(() => {});
+  }, []);
 
   const plan = useMemo(() => computePlan(state.profile), [state.profile]);
 
@@ -222,13 +242,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }));
 
       const ctxSnapshot = state;
-      const result = await runAssistant(text, {
-        profile: ctxSnapshot.profile,
-        likes: ctxSnapshot.likes,
-        dislikes: ctxSnapshot.dislikes,
-        extraDislikes: ctxSnapshot.extraDislikes,
-        diets: ctxSnapshot.diets,
-      });
+      const result = await runAssistant(
+        text,
+        {
+          profile: ctxSnapshot.profile,
+          likes: ctxSnapshot.likes,
+          dislikes: ctxSnapshot.dislikes,
+          extraDislikes: ctxSnapshot.extraDislikes,
+          diets: ctxSnapshot.diets,
+          meals: ctxSnapshot.meals,
+          plan: computePlan(ctxSnapshot.profile),
+        },
+        aiSettings
+      );
 
       setState((s) => {
         let next = s;
@@ -249,7 +275,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         return { ...next, iaThinking: false, chat: [...s.chat, ...newMessages] };
       });
     },
-    [state, applyAction]
+    [state, applyAction, aiSettings]
   );
 
   const value: AppApi = {
@@ -268,6 +294,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addBuiltMeal,
     setDraft,
     sendMessage,
+    aiSettings,
+    setAiSettings,
   };
 
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;

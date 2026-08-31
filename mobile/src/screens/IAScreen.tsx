@@ -1,9 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatMessage, useApp } from '../state/AppContext';
 import { colors, font, radius } from '../theme/theme';
+import { AiSettingsModal } from '../components/AiSettingsModal';
 
 const PROMPTS = [
   'Súbeme 200 kcal',
@@ -16,6 +17,8 @@ const PROMPTS = [
 export default function IAScreen() {
   const app = useApp();
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const connected = !!app.aiSettings.baseUrl;
 
   const send = (text?: string) => {
     app.sendMessage(text);
@@ -30,11 +33,13 @@ export default function IAScreen() {
             <Text style={styles.kicker}>Asistente</Text>
             <Text style={styles.h1}>Dile qué quieres</Text>
           </View>
-          <View style={styles.activePill}>
-            <View style={styles.activeDot} />
-            <Text style={styles.activeText}>Activa</Text>
-          </View>
+          <Pressable onPress={() => setSettingsOpen(true)} style={[styles.activePill, !connected && styles.activePillOff]}>
+            <View style={[styles.activeDot, !connected && { backgroundColor: colors.textGhost }]} />
+            <Text style={styles.activeText}>{connected ? 'Modelo local' : 'Ajustes'}</Text>
+          </Pressable>
         </View>
+
+        <AiSettingsModal visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
         <FlatList
           ref={listRef}
@@ -163,6 +168,7 @@ const styles = StyleSheet.create({
   kicker: { fontSize: 11, letterSpacing: 1.5, textTransform: 'uppercase', color: colors.textFaint, marginBottom: 5, fontFamily: font.medium },
   h1: { fontSize: 27, fontFamily: font.semibold, letterSpacing: -0.6, color: colors.black },
   activePill: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 7, borderRadius: radius.pill, backgroundColor: colors.lime },
+  activePillOff: { backgroundColor: colors.fillSoft },
   activeDot: { width: 6, height: 6, borderRadius: 6, backgroundColor: colors.black },
   activeText: { fontSize: 11, fontFamily: font.semibold, color: colors.black },
   bubble: { maxWidth: '84%', paddingHorizontal: 15, paddingVertical: 13, borderRadius: 18 },

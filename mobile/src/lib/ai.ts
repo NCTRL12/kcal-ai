@@ -11,7 +11,8 @@
 // the Claude API server-side with this same system prompt shape and tool
 // list, and returns { reply, actions } in the same shape used below.
 
-import { BuiltMeal, Diet, Goal, Profile, buildMeal, computePlan, matchFood } from './nutrition';
+import { BuiltMeal, Diet, Goal, Meal, Plan, Profile, buildMeal, computePlan, matchFood } from './nutrition';
+import { AiSettings, runAssistantOllama } from './ollama';
 
 export interface AssistantContext {
   profile: Profile;
@@ -19,6 +20,8 @@ export interface AssistantContext {
   dislikes: string[];
   extraDislikes: string[];
   diets: Diet[];
+  meals: Meal[];
+  plan: Plan;
 }
 
 export type AssistantAction =
@@ -63,7 +66,7 @@ function detectMealSlot(text: string): BuiltMeal['slot'] {
   return 'Cena';
 }
 
-export async function runAssistant(text: string, ctx: AssistantContext): Promise<AssistantResult> {
+async function runAssistantLocal(text: string, ctx: AssistantContext): Promise<AssistantResult> {
   // Simulate the model taking a beat, same feel as the prototype's typing dots.
   await new Promise((r) => setTimeout(r, 550 + Math.random() * 450));
 
@@ -157,7 +160,28 @@ export async function runAssistant(text: string, ctx: AssistantContext): Promise
 
   return {
     reply:
-      'Puedo cambiar tus calorías, excluir o priorizar alimentos, aplicar restricciones, proponerte comidas o cambiar tu objetivo — dime qué necesitas. (Este entorno usa un asistente local de ejemplo; conéctalo a tu backend con la API de Claude para respuestas abiertas.)',
+      'Puedo cambiar tus calorías, excluir o priorizar alimentos, aplicar restricciones, proponerte comidas o cambiar tu objetivo — dime qué necesitas. (Sin un modelo local conectado en Ajustes, solo entiendo estas frases concretas.)',
     actions,
   };
+}
+
+/**
+ * Single entry point the UI calls. Uses the user's local Ollama server when
+ * configured (Ajustes, in the IA screen), falling back to the built-in
+ * rule-matcher — with a short note appended — if the server is unreachable.
+ */
+export async function runAssistant(text: string, ctx: AssistantContext, aiSettings?: AiSettings): Promise<AssistantResult> {
+  if (aiSettings?.baseUrl) {
+    try {
+      return await runAssistantOllama(text, ctx, aiSettings);
+    } catch (err) {
+      const fallback = await runAssistantLocal(text, ctx);
+      const reason = err instanceof Error ? err.message : String(err);
+      return {
+        ...fallback,
+        reply: `No pude hablar con tu modelo en ${aiSettings.baseUrl} (${reason}). Uso el asistente básico mientras tanto.\n\n${fallback.reply}`,
+      };
+    }
+  }
+  return runAssistantLocal(text, ctx);
 }
