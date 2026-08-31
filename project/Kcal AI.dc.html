@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#e9e9ec}
+*{box-sizing:border-box}
+a{color:#111;text-decoration:none}
+a:hover{color:#5a6b00}
+@keyframes kpulse{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+@keyframes kscan{0%{transform:translateY(-90px)}100%{transform:translateY(90px)}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;gap:56px;padding:56px 40px;font-family:-apple-system,'SF Pro Text','Inter Tight',system-ui,sans-serif">
+
+<div style="display:flex;flex-direction:column;gap:18px;width:250px;color:#111">
+<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8f">Prototipo</div>
+<div style="font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.05">Kcal AI</div>
+<div style="font-size:13.5px;line-height:1.55;color:#5b5b60;text-wrap:pretty">Contador de calorías por foto para deportistas. Blanco y negro, un solo acento lima. La IA calcula tus objetivos diarios a partir de tu peso, edad y meta.</div>
+<div style="height:1px;background:#d3d3d8;margin:2px 0"></div>
+<div style="display:flex;flex-direction:column;gap:10px;font-size:12.5px;color:#5b5b60">
+<div style="display:flex;gap:9px;align-items:center"><span style="width:9px;height:9px;border-radius:9px;background:#E8F982;flex:none"></span>Plan IA en 3 pasos</div>
+<div style="display:flex;gap:9px;align-items:center"><span style="width:9px;height:9px;border-radius:9px;background:#E8F982;flex:none"></span>Escaneo con cámara</div>
+<div style="display:flex;gap:9px;align-items:center"><span style="width:9px;height:9px;border-radius:9px;background:#E8F982;flex:none"></span>Diario y progreso</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
+<button onClick="{{ goPlan }}" style="border:1px solid #111;background:#111;color:#fff;font:500 11.5px/1 inherit;padding:9px 12px;border-radius:100px;cursor:pointer" style-hover="background:#000;border-color:#000">Reiniciar plan IA</button>
+<button onClick="{{ goHoy }}" style="border:1px solid #c9c9ce;background:transparent;color:#111;font:500 11.5px/1 inherit;padding:9px 12px;border-radius:100px;cursor:pointer" style-hover="background:#E8F982;border-color:#E8F982">Hoy</button>
+<button onClick="{{ goScan }}" style="border:1px solid #c9c9ce;background:transparent;color:#111;font:500 11.5px/1 inherit;padding:9px 12px;border-radius:100px;cursor:pointer" style-hover="background:#E8F982;border-color:#E8F982">Escanear</button>
+<button onClick="{{ goIA }}" style="border:1px solid #c9c9ce;background:transparent;color:#111;font:500 11.5px/1 inherit;padding:9px 12px;border-radius:100px;cursor:pointer" style-hover="background:#E8F982;border-color:#E8F982">Asistente IA</button>
+<button onClick="{{ goProgreso }}" style="border:1px solid #c9c9ce;background:transparent;color:#111;font:500 11.5px/1 inherit;padding:9px 12px;border-radius:100px;cursor:pointer" style-hover="background:#E8F982;border-color:#E8F982">Progreso</button>
+</div>
+</div>
+
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ isScan }}" hint-size="402px,874px">
+
+<sc-if value="{{ isPlan }}" hint-placeholder-val="{{ true }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#fff;color:#111">
+<div style="padding:64px 26px 0;display:flex;flex-direction:column;gap:20px;flex:1;overflow:auto">
+<div style="display:flex;gap:5px">
+<div style="height:3px;flex:1;border-radius:3px;background:#111"></div>
+<div style="height:3px;flex:1;border-radius:3px;background:{{ step2Bar }}"></div>
+<div style="height:3px;flex:1;border-radius:3px;background:{{ step3Bar }}"></div>
+<div style="height:3px;flex:1;border-radius:3px;background:{{ step4Bar }}"></div>
+</div>
+<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8f">Plan IA · paso {{ stepLabel }}</div>
+
+<sc-if value="{{ isStep1 }}">
+<div style="display:flex;flex-direction:column;gap:22px">
+<div style="font-size:31px;font-weight:600;letter-spacing:-.025em;line-height:1.08;text-wrap:balance">Cuéntame sobre ti y calculo tus calorías.</div>
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;gap:12px">
+<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="font-size:11.5px;color:#8a8a8f">Edad</div><input value="{{ edad }}" onChange="{{ setEdad }}" inputMode="numeric" style="width:100%;border:none;border-bottom:1.5px solid #dcdce1;background:transparent;font:600 27px/1 inherit;color:#111;padding:0 0 8px;outline:none" style-focus="border-bottom-color:#111"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="font-size:11.5px;color:#8a8a8f">Peso (kg)</div><input value="{{ peso }}" onChange="{{ setPeso }}" inputMode="numeric" style="width:100%;border:none;border-bottom:1.5px solid #dcdce1;background:transparent;font:600 27px/1 inherit;color:#111;padding:0 0 8px;outline:none" style-focus="border-bottom-color:#111"></div>
+<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="font-size:11.5px;color:#8a8a8f">Altura</div><input value="{{ altura }}" onChange="{{ setAltura }}" inputMode="numeric" style="width:100%;border:none;border-bottom:1.5px solid #dcdce1;background:transparent;font:600 27px/1 inherit;color:#111;padding:0 0 8px;outline:none" style-focus="border-bottom-color:#111"></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+<div style="font-size:11.5px;color:#8a8a8f">Sexo</div>
+<div style="display:flex;gap:8px">
+<button onClick="{{ setHombre }}" style="flex:1;padding:13px;border-radius:14px;border:1.5px solid {{ sexoHBorder }};background:{{ sexoHBg }};color:#111;font:500 14px/1 inherit;cursor:pointer">Hombre</button>
+<button onClick="{{ setMujer }}" style="flex:1;padding:13px;border-radius:14px;border:1.5px solid {{ sexoMBorder }};background:{{ sexoMBg }};color:#111;font:500 14px/1 inherit;cursor:pointer">Mujer</button>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+<div style="font-size:11.5px;color:#8a8a8f">Entrenamientos por semana</div>
+<div style="display:flex;gap:6px">
+<sc-for list="{{ actOptions }}" as="opt" hint-placeholder-count="4">
+<button onClick="{{ opt.pick }}" style="flex:1;padding:12px 0;border-radius:12px;border:1.5px solid {{ opt.border }};background:{{ opt.bg }};color:#111;font:500 13.5px/1 inherit;cursor:pointer">{{ opt.label }}</button>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStep2 }}">
+<div style="display:flex;flex-direction:column;gap:22px">
+<div style="font-size:31px;font-weight:600;letter-spacing:-.025em;line-height:1.08;text-wrap:balance">¿Cuál es tu objetivo?</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ goalOptions }}" as="g" hint-placeholder-count="3">
+<button onClick="{{ g.pick }}" style="text-align:left;padding:18px;border-radius:18px;border:1.5px solid {{ g.border }};background:{{ g.bg }};cursor:pointer;display:flex;flex-direction:column;gap:5px;font-family:inherit">
+<div style="font-size:16.5px;font-weight:600;color:#111">{{ g.label }}</div>
+<div style="font-size:12.5px;color:#5b5b60;line-height:1.4">{{ g.note }}</div>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{ isCustomGoal }}">
+<div style="display:flex;flex-direction:column;gap:9px;padding:16px;border-radius:18px;border:1.5px solid #111;background:#fafafa">
+<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8f">Escríbelo tú</div>
+<input value="{{ customGoal }}" onChange="{{ setCustomGoal }}" placeholder="ej. bajar al 12% de grasa antes de octubre" style="width:100%;border:none;border-bottom:1.5px solid #dcdce1;background:transparent;font:500 15px/1.3 inherit;color:#111;padding:0 0 9px;outline:none" style-focus="border-bottom-color:#111">
+<div style="font-size:12px;color:#5b5b60;line-height:1.45">La IA lo interpreta y ajusta calorías, macros y sugerencias a lo que escribas.</div>
+</div>
+</sc-if>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+<div style="display:flex;justify-content:space-between;font-size:11.5px;color:#8a8a8f"><span>Ritmo semanal</span><span style="color:#111;font-weight:600">{{ ritmoLabel }}</span></div>
+<input type="range" min="0" max="4" step="1" value="{{ ritmo }}" onChange="{{ setRitmo }}" style="width:100%;accent-color:#111">
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStep3 }}">
+<div style="display:flex;flex-direction:column;gap:24px">
+<div style="font-size:31px;font-weight:600;letter-spacing:-.025em;line-height:1.08;text-wrap:balance">Qué te gusta comer y qué no soportas.</div>
+<div style="display:flex;flex-direction:column;gap:11px">
+<div style="display:flex;justify-content:space-between;align-items:baseline">
+<div style="font-size:12px;color:#8a8a8f">Toca una vez para <span style="color:#111;font-weight:600">me gusta</span>, dos para <span style="color:#111;font-weight:600">no lo soporto</span></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<sc-for list="{{ foodChips }}" as="f" hint-placeholder-count="14">
+<button onClick="{{ f.cycle }}" style="padding:9px 13px;border-radius:100px;border:1.5px solid {{ f.border }};background:{{ f.bg }};color:{{ f.fg }};font:500 13px/1 inherit;cursor:pointer;text-decoration:{{ f.strike }}">{{ f.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:11px">
+<div style="font-size:12px;color:#8a8a8f">Restricciones</div>
+<div style="display:flex;flex-wrap:wrap;gap:7px">
+<sc-for list="{{ dietChips }}" as="d" hint-placeholder-count="5">
+<button onClick="{{ d.toggle }}" style="padding:9px 13px;border-radius:100px;border:1.5px solid {{ d.border }};background:{{ d.bg }};color:#111;font:500 13px/1 inherit;cursor:pointer">{{ d.label }}</button>
+</sc-for>
+</div>
+</div>
+<div style="font-size:12.5px;color:#5b5b60;line-height:1.5">{{ gustosResumen }}</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStep4 }}">
+<div style="display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;gap:9px">
+<span style="width:7px;height:7px;border-radius:7px;background:#E8F982;animation:kpulse 1.4s infinite"></span>
+<span style="font-size:12.5px;color:#5b5b60">Calculado por la IA con tus datos</span>
+</div>
+<div style="font-size:31px;font-weight:600;letter-spacing:-.025em;line-height:1.08">Tu plan diario</div>
+<div style="border-radius:22px;background:#111;color:#fff;padding:24px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:baseline;gap:8px">
+<div style="font-size:52px;font-weight:600;letter-spacing:-.04em;line-height:.9;color:#E8F982">{{ planKcal }}</div>
+<div style="font-size:13px;color:#a5a5aa">kcal / día</div>
+</div>
+<div style="height:1px;background:rgba(255,255,255,.14)"></div>
+<div style="display:flex;gap:18px">
+<div style="flex:1"><div style="font-size:11px;color:#a5a5aa;margin-bottom:4px">Proteína</div><div style="font-size:19px;font-weight:600">{{ planP }} g</div></div>
+<div style="flex:1"><div style="font-size:11px;color:#a5a5aa;margin-bottom:4px">Carbos</div><div style="font-size:19px;font-weight:600">{{ planC }} g</div></div>
+<div style="flex:1"><div style="font-size:11px;color:#a5a5aa;margin-bottom:4px">Grasas</div><div style="font-size:19px;font-weight:600">{{ planG }} g</div></div>
+</div>
+</div>
+<div style="font-size:13px;line-height:1.55;color:#5b5b60;text-wrap:pretty">{{ planNota }}</div>
+</div>
+</sc-if>
+</div>
+
+<div style="padding:16px 26px 40px;display:flex;gap:10px;background:#fff">
+<sc-if value="{{ canBack }}">
+<button onClick="{{ back }}" style="width:52px;height:52px;border-radius:100px;border:1.5px solid #dcdce1;background:#fff;color:#111;font:400 20px/1 inherit;cursor:pointer" style-hover="border-color:#111">←</button>
+</sc-if>
+<button onClick="{{ next }}" style="flex:1;height:52px;border-radius:100px;border:none;background:#111;color:#fff;font:600 15px/1 inherit;cursor:pointer;letter-spacing:-.01em" style-hover="background:#000">{{ nextLabel }}</button>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHoy }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#fff;color:#111">
+<div style="flex:1;overflow:auto;padding:60px 22px 16px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:flex-end;justify-content:space-between">
+<div><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8f;margin-bottom:5px">Lunes 31 ago</div><div style="font-size:27px;font-weight:600;letter-spacing:-.025em">Hoy</div></div>
+<div style="font-size:11.5px;color:#5b5b60;text-align:right;line-height:1.35">Objetivo<br><span style="color:#111;font-weight:600;font-size:14px">{{ planKcal }} kcal</span></div>
+</div>
+
+<div style="display:flex;align-items:center;gap:22px">
+<div style="position:relative;width:150px;height:150px;flex:none">
+<svg viewBox="0 0 120 120" style="width:150px;height:150px;transform:rotate(-90deg)">
+<circle cx="60" cy="60" r="52" fill="none" stroke="#f0f0f3" stroke-width="12"></circle>
+<circle cx="60" cy="60" r="52" fill="none" stroke="#E8F982" stroke-width="12" stroke-linecap="round" stroke-dasharray="326.7" stroke-dashoffset="{{ ringOffset }}"></circle>
+</svg>
+<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+<div style="font-size:31px;font-weight:600;letter-spacing:-.03em;line-height:1">{{ restante }}</div>
+<div style="font-size:10.5px;color:#8a8a8f;letter-spacing:.04em">KCAL RESTANTES</div>
+</div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;gap:14px">
+<sc-for list="{{ macros }}" as="m" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#5b5b60">{{ m.label }}</span><span style="font-weight:600">{{ m.text }}</span></div>
+<div style="height:5px;border-radius:5px;background:#f0f0f3;overflow:hidden"><div style="height:100%;border-radius:5px;background:#111;width:{{ m.pct }}"></div></div>
+</div>
+</sc-for>
+</div>
+</div>
+
+<button onClick="{{ goScan }}" style="display:flex;align-items:center;gap:14px;padding:16px 18px;border-radius:20px;border:none;background:#E8F982;cursor:pointer;font-family:inherit;text-align:left" style-hover="background:#dff06a">
+<span style="width:40px;height:40px;border-radius:100px;background:#111;display:flex;align-items:center;justify-content:center;flex:none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8F982" stroke-width="1.7"><rect x="3" y="6" width="18" height="14" rx="3"></rect><circle cx="12" cy="13" r="3.6"></circle><path d="M8.5 6l1.3-2.2h4.4L15.5 6"></path></svg>
+</span>
+<span style="flex:1"><span style="display:block;font-size:15px;font-weight:600;color:#111">Escanear comida</span><span style="display:block;font-size:12px;color:#4d5406;margin-top:2px">Una foto y la IA estima kcal y macros</span></span>
+<span style="font-size:18px;color:#111">→</span>
+</button>
+
+<button onClick="{{ goIA }}" style="display:flex;align-items:flex-start;gap:12px;padding:0;border:none;background:none;cursor:pointer;font-family:inherit;text-align:left">
+<span style="width:22px;height:22px;border-radius:100px;border:1.5px solid #111;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex:none;margin-top:1px">IA</span>
+<span style="flex:1;font-size:12.5px;line-height:1.45;color:#5b5b60">{{ hoyNudge }} <span style="color:#111;font-weight:600;text-decoration:underline;text-decoration-color:#E8F982;text-decoration-thickness:2px;text-underline-offset:2px">Pídeme una cena</span></span>
+</button>
+
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+<div style="font-size:15.5px;font-weight:600">Comidas de hoy</div>
+<div style="font-size:12px;color:#8a8a8f">{{ consumido }} kcal</div>
+</div>
+<sc-for list="{{ meals }}" as="meal" hint-placeholder-count="3">
+<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-top:1px solid #eeeef1">
+<div style="width:44px;height:44px;border-radius:13px;background:#f4f4f6;display:flex;align-items:center;justify-content:center;font-size:10px;color:#a0a0a5;flex:none;text-align:center;line-height:1.15">{{ meal.slot }}</div>
+<div style="flex:1;min-width:0">
+<div style="font-size:14.5px;font-weight:500;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ meal.name }}</div>
+<div style="font-size:11.5px;color:#8a8a8f;margin-top:3px">{{ meal.macroText }}</div>
+</div>
+<div style="font-size:14.5px;font-weight:600">{{ meal.kcal }}</div>
+</div>
+</sc-for>
+</div>
+</div>
+<div style="display:flex;padding:10px 18px 34px;border-top:1px solid #eeeef1;background:rgba(255,255,255,.9)">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+<button onClick="{{ t.pick }}" style="flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 0;font-family:inherit;color:{{ t.color }}">
+<span style="font-size:11.5px;font-weight:600;letter-spacing:-.01em">{{ t.label }}</span>
+<span style="width:16px;height:2.5px;border-radius:3px;background:{{ t.dot }}"></span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isScan }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#000;color:#fff;position:relative">
+<div style="position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 30%,#3a3a3d 0%,#141416 55%,#000 100%)"></div>
+<div style="position:relative;flex:1;display:flex;flex-direction:column;padding:62px 22px 0">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<button onClick="{{ goHoy }}" style="width:34px;height:34px;border-radius:100px;border:none;background:rgba(255,255,255,.14);color:#fff;font:400 17px/1 inherit;cursor:pointer">✕</button>
+<div style="font-size:12.5px;color:rgba(255,255,255,.6)">{{ scanTitle }}</div>
+<div style="width:34px"></div>
+</div>
+<div style="flex:1;display:flex;align-items:center;justify-content:center">
+<div style="position:relative;width:260px;height:260px">
+<div style="position:absolute;inset:0;border-radius:34px;border:1px solid rgba(255,255,255,.18)"></div>
+<div style="position:absolute;top:-1px;left:-1px;width:44px;height:44px;border-top:2.5px solid #E8F982;border-left:2.5px solid #E8F982;border-radius:34px 0 0 0"></div>
+<div style="position:absolute;top:-1px;right:-1px;width:44px;height:44px;border-top:2.5px solid #E8F982;border-right:2.5px solid #E8F982;border-radius:0 34px 0 0"></div>
+<div style="position:absolute;bottom:-1px;left:-1px;width:44px;height:44px;border-bottom:2.5px solid #E8F982;border-left:2.5px solid #E8F982;border-radius:0 0 0 34px"></div>
+<div style="position:absolute;bottom:-1px;right:-1px;width:44px;height:44px;border-bottom:2.5px solid #E8F982;border-right:2.5px solid #E8F982;border-radius:0 0 34px 0"></div>
+<sc-if value="{{ isAnalyzing }}">
+<div style="position:absolute;left:14px;right:14px;top:50%;height:2px;background:linear-gradient(90deg,transparent,#E8F982,transparent);animation:kscan 1.1s ease-in-out infinite alternate"></div>
+</sc-if>
+<div style="position:absolute;inset:34px;border-radius:18px;background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;text-align:center;font-size:11.5px;color:rgba(255,255,255,.42);line-height:1.5;padding:18px">Encuadra el plato<br>dentro del marco</div>
+</div>
+</div>
+</div>
+
+<sc-if value="{{ isResult }}">
+<div style="position:relative;background:#fff;color:#111;border-radius:28px 28px 0 0;padding:22px 22px 34px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:flex-start;gap:12px">
+<div style="flex:1">
+<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8f;margin-bottom:5px">Detectado · 92% confianza</div>
+<div style="font-size:22px;font-weight:600;letter-spacing:-.025em">Pollo, arroz y aguacate</div>
+</div>
+<div style="text-align:right"><div style="font-size:27px;font-weight:600;letter-spacing:-.03em">780</div><div style="font-size:10.5px;color:#8a8a8f">kcal</div></div>
+</div>
+<div style="display:flex;gap:8px">
+<sc-for list="{{ detected }}" as="d" hint-placeholder-count="3">
+<div style="flex:1;padding:12px;border-radius:14px;background:#f6f6f8"><div style="font-size:11px;color:#8a8a8f;margin-bottom:4px">{{ d.label }}</div><div style="font-size:16px;font-weight:600">{{ d.value }}</div></div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:0">
+<sc-for list="{{ items }}" as="it" hint-placeholder-count="3">
+<div style="display:flex;justify-content:space-between;padding:11px 0;border-top:1px solid #eeeef1;font-size:13.5px"><span style="color:#3c3c40">{{ it.name }}</span><span style="color:#8a8a8f">{{ it.qty }}</span></div>
+</sc-for>
+</div>
+<div style="display:flex;gap:10px">
+<button onClick="{{ retry }}" style="width:52px;height:52px;border-radius:100px;border:1.5px solid #dcdce1;background:#fff;color:#111;font:400 17px/1 inherit;cursor:pointer" style-hover="border-color:#111">↺</button>
+<button onClick="{{ addMeal }}" style="flex:1;height:52px;border-radius:100px;border:none;background:#111;color:#fff;font:600 15px/1 inherit;cursor:pointer">Añadir al diario</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ isAim }}">
+<div style="position:relative;padding:0 22px 46px;display:flex;flex-direction:column;align-items:center;gap:16px">
+<div style="font-size:12.5px;color:rgba(255,255,255,.55)">Estimación de porción por volumen</div>
+<button onClick="{{ shoot }}" style="width:74px;height:74px;border-radius:100px;border:4px solid rgba(255,255,255,.85);background:#E8F982;cursor:pointer" style-hover="background:#dff06a"></button>
+</div>
+</sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{ isIA }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#fff;color:#111">
+<div style="padding:58px 22px 12px;display:flex;align-items:flex-end;justify-content:space-between">
+<div>
+<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8a8a8f;margin-bottom:5px">Asistente</div>
+<div style="font-size:27px;font-weight:600;letter-spacing:-.025em">Dile qué quieres</div>
+</div>
+<div style="display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:100px;background:#E8F982;font-size:11px;font-weight:600">
+<span style="width:6px;height:6px;border-radius:6px;background:#111;animation:kpulse 1.6s infinite"></span>Activa
+</div>
+</div>
+
+<div style="flex:1;overflow:auto;padding:8px 22px 8px;display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ chat }}" as="m" hint-placeholder-count="4">
+<div style="display:flex;flex-direction:column;align-items:{{ m.align }};gap:8px">
+<sc-if value="{{ m.hasText }}" hint-placeholder-val="{{ true }}">
+<div style="max-width:84%;padding:13px 15px;border-radius:{{ m.radius }};background:{{ m.bg }};color:{{ m.fg }};font-size:14px;line-height:1.5;white-space:pre-wrap">{{ m.text }}</div>
+</sc-if>
+<sc-if value="{{ m.isMeal }}">
+<div style="width:100%;border-radius:20px;border:1.5px solid #111;padding:16px;display:flex;flex-direction:column;gap:13px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+<div style="font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.25">{{ m.mealName }}</div>
+<div style="text-align:right;flex:none"><div style="font-size:20px;font-weight:600;letter-spacing:-.02em">{{ m.mealKcal }}</div><div style="font-size:10px;color:#8a8a8f">kcal</div></div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ m.mealItems }}" as="mi" hint-placeholder-count="3">
+<span style="padding:6px 10px;border-radius:100px;background:#f4f4f6;font-size:11.5px;color:#3c3c40">{{ mi }}</span>
+</sc-for>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+<div style="font-size:11.5px;color:#8a8a8f">{{ m.mealMacros }}</div>
+<button onClick="{{ m.add }}" style="padding:10px 15px;border-radius:100px;border:none;background:#111;color:#fff;font:600 12.5px/1 inherit;cursor:pointer">Añadir al diario</button>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ m.isChange }}">
+<div style="width:100%;padding:13px 15px;border-radius:16px;background:#E8F982;display:flex;align-items:center;gap:10px">
+<span style="width:22px;height:22px;border-radius:100px;background:#111;color:#E8F982;font-size:12px;display:flex;align-items:center;justify-content:center;flex:none">✓</span>
+<span style="font-size:12.5px;font-weight:600;color:#111;line-height:1.35">{{ m.changeText }}</span>
+</div>
+</sc-if>
+</div>
+</sc-for>
+<sc-if value="{{ iaThinking }}">
+<div style="display:flex;gap:5px;padding:4px 2px">
+<span style="width:6px;height:6px;border-radius:6px;background:#c9c9ce;animation:kpulse 1s infinite"></span>
+<span style="width:6px;height:6px;border-radius:6px;background:#c9c9ce;animation:kpulse 1s .2s infinite"></span>
+<span style="width:6px;height:6px;border-radius:6px;background:#c9c9ce;animation:kpulse 1s .4s infinite"></span>
+</div>
+</sc-if>
+</div>
+
+<div style="padding:8px 22px 0;display:flex;gap:6px;overflow:auto">
+<sc-for list="{{ prompts }}" as="p" hint-placeholder-count="3">
+<button onClick="{{ p.pick }}" style="flex:none;padding:9px 13px;border-radius:100px;border:1px solid #e2e2e6;background:#fff;color:#3c3c40;font:500 12px/1 inherit;cursor:pointer;white-space:nowrap" style-hover="border-color:#111;background:#fafafa">{{ p.label }}</button>
+</sc-for>
+</div>
+
+<div style="padding:12px 18px 10px;display:flex;gap:9px;align-items:center">
+<input value="{{ draft }}" onChange="{{ setDraft }}" onKeyDown="{{ onKey }}" placeholder="Sube 200 kcal, quítame el arroz…" style="flex:1;height:48px;border-radius:100px;border:1.5px solid #e2e2e6;background:#fafafa;padding:0 18px;font:400 14px/1 inherit;color:#111;outline:none" style-focus="border-color:#111;background:#fff">
+<button onClick="{{ send }}" style="width:48px;height:48px;border-radius:100px;border:none;background:#111;color:#E8F982;font:600 17px/1 inherit;cursor:pointer;flex:none" style-hover="background:#000">↑</button>
+</div>
+<div style="display:flex;padding:0 18px 34px;border-top:1px solid #eeeef1;padding-top:10px">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+<button onClick="{{ t.pick }}" style="flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 0;font-family:inherit;color:{{ t.color }}">
+<span style="font-size:11.5px;font-weight:600">{{ t.label }}</span>
+<span style="width:16px;height:2.5px;border-radius:3px;background:{{ t.dot }}"></span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isDiario }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#fff;color:#111">
+<div style="flex:1;overflow:auto;padding:60px 22px 16px;display:flex;flex-direction:column;gap:24px">
+<div style="font-size:27px;font-weight:600;letter-spacing:-.025em">Diario</div>
+<div style="display:flex;gap:6px">
+<sc-for list="{{ week }}" as="d" hint-placeholder-count="7">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px">
+<div style="font-size:10.5px;color:#8a8a8f">{{ d.day }}</div>
+<div style="width:100%;padding:9px 0;border-radius:11px;background:{{ d.bg }};color:{{ d.fg }};font-size:12.5px;font-weight:600;text-align:center">{{ d.num }}</div>
+</div>
+</sc-for>
+</div>
+<sc-for list="{{ history }}" as="h" hint-placeholder-count="3">
+<div style="display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+<div style="font-size:15.5px;font-weight:600">{{ h.title }}</div>
+<div style="font-size:12px;color:{{ h.deltaColor }};font-weight:600">{{ h.delta }}</div>
+</div>
+<sc-for list="{{ h.rows }}" as="r" hint-placeholder-count="2">
+<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #eeeef1">
+<div style="width:36px;height:36px;border-radius:11px;background:#f4f4f6;flex:none"></div>
+<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</div><div style="font-size:11.5px;color:#8a8a8f;margin-top:2px">{{ r.meta }}</div></div>
+<div style="font-size:14px;font-weight:600">{{ r.kcal }}</div>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;padding:10px 18px 34px;border-top:1px solid #eeeef1">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+<button onClick="{{ t.pick }}" style="flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 0;font-family:inherit;color:{{ t.color }}">
+<span style="font-size:11.5px;font-weight:600">{{ t.label }}</span>
+<span style="width:16px;height:2.5px;border-radius:3px;background:{{ t.dot }}"></span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isProgreso }}">
+<div style="height:100%;display:flex;flex-direction:column;background:#fff;color:#111">
+<div style="flex:1;overflow:auto;padding:60px 22px 16px;display:flex;flex-direction:column;gap:26px">
+<div style="font-size:27px;font-weight:600;letter-spacing:-.025em">Progreso</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline">
+<div style="font-size:13px;color:#5b5b60">Calorías vs objetivo</div>
+<div style="font-size:11.5px;color:#8a8a8f">7 días</div>
+</div>
+<div style="display:flex;align-items:flex-end;gap:9px;height:130px;position:relative">
+<div style="position:absolute;left:0;right:0;bottom:{{ targetLine }};height:1px;background:#111;opacity:.25"></div>
+<sc-for list="{{ bars }}" as="b" hint-placeholder-count="7">
+<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;height:100%;justify-content:flex-end">
+<div style="width:100%;border-radius:7px 7px 3px 3px;background:{{ b.fill }};height:{{ b.h }}"></div>
+<div style="font-size:10px;color:#8a8a8f">{{ b.day }}</div>
+</div>
+</sc-for>
+</div>
+<div style="font-size:11.5px;color:#8a8a8f">La línea marca tu objetivo de {{ planKcal }} kcal</div>
+</div>
+
+<div style="display:flex;gap:10px">
+<sc-for list="{{ stats }}" as="s" hint-placeholder-count="2">
+<div style="flex:1;padding:16px;border-radius:18px;background:#f6f6f8;display:flex;flex-direction:column;gap:5px">
+<div style="font-size:11px;color:#8a8a8f">{{ s.label }}</div>
+<div style="font-size:21px;font-weight:600;letter-spacing:-.02em">{{ s.value }}</div>
+<div style="font-size:11px;color:#5b5b60">{{ s.note }}</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<div style="font-size:13px;color:#5b5b60">Peso corporal · 8 semanas</div>
+<div style="position:relative;height:120px">
+<svg viewBox="0 0 300 120" preserveAspectRatio="none" style="width:100%;height:120px">
+<polyline points="{{ weightArea }}" fill="#E8F982" opacity="0.5" stroke="none"></polyline>
+<polyline points="{{ weightLine }}" fill="none" stroke="#111" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline>
+</svg>
+</div>
+<div style="display:flex;justify-content:space-between;font-size:11px;color:#8a8a8f"><span>hace 8 sem · 76,4 kg</span><span>hoy · {{ peso }},0 kg</span></div>
+</div>
+
+<div style="padding:18px;border-radius:20px;background:#111;color:#fff;display:flex;flex-direction:column;gap:9px">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:7px;height:7px;border-radius:7px;background:#E8F982"></span><span style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#a5a5aa">Ajuste de la IA</span></div>
+<div style="font-size:14px;line-height:1.5;color:#e7e7ea;text-wrap:pretty">{{ aiNota }}</div>
+<button onClick="{{ goPlan }}" style="align-self:flex-start;margin-top:4px;padding:10px 16px;border-radius:100px;border:none;background:#E8F982;color:#111;font:600 13px/1 inherit;cursor:pointer">Recalcular plan</button>
+</div>
+</div>
+<div style="display:flex;padding:10px 18px 34px;border-top:1px solid #eeeef1">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+<button onClick="{{ t.pick }}" style="flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 0;font-family:inherit;color:{{ t.color }}">
+<span style="font-size:11.5px;font-weight:600">{{ t.label }}</span>
+<span style="width:16px;height:2.5px;border-radius:3px;background:{{ t.dot }}"></span>
+</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</x-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1100,&quot;height&quot;:980}}">
+const LIME = '#E8F982';
+const RITMOS = ['muy suave', 'suave', 'moderado', 'rápido', 'agresivo'];
+const DIETS = ['Sin lactosa', 'Sin gluten', 'Vegetariano', 'Sin pescado', 'Sin cerdo'];
+const FOODS = [
+  { id: 'pollo', label: 'Pollo', kind: 'prot', kcal: 345, p: 44, qty: '210 g' },
+  { id: 'salmon', label: 'Salmón', kind: 'prot', kcal: 370, p: 38, qty: '180 g', tags: ['Sin pescado'] },
+  { id: 'ternera', label: 'Ternera', kind: 'prot', kcal: 380, p: 48, qty: '200 g' },
+  { id: 'huevos', label: 'Huevos', kind: 'prot', kcal: 220, p: 19, qty: '3 uds' },
+  { id: 'atun', label: 'Atún', kind: 'prot', kcal: 200, p: 40, qty: '150 g', tags: ['Sin pescado'] },
+  { id: 'lentejas', label: 'Lentejas', kind: 'prot', kcal: 230, p: 16, qty: '200 g' },
+  { id: 'yogur', label: 'Yogur griego', kind: 'prot', kcal: 150, p: 25, qty: '250 g', tags: ['Sin lactosa'] },
+  { id: 'arroz', label: 'Arroz', kind: 'carb', kcal: 235, p: 5, qty: '180 g' },
+  { id: 'pasta', label: 'Pasta', kind: 'carb', kcal: 210, p: 7, qty: '150 g', tags: ['Sin gluten'] },
+  { id: 'boniato', label: 'Boniato', kind: 'carb', kcal: 215, p: 4, qty: '250 g' },
+  { id: 'avena', label: 'Avena', kind: 'carb', kcal: 300, p: 10, qty: '80 g' },
+  { id: 'platano', label: 'Plátano', kind: 'carb', kcal: 105, p: 1, qty: '1 ud' },
+  { id: 'aguacate', label: 'Aguacate', kind: 'extra', kcal: 160, p: 2, qty: '½ ud' },
+  { id: 'nueces', label: 'Frutos secos', kind: 'extra', kcal: 185, p: 5, qty: '30 g' },
+  { id: 'brocoli', label: 'Brócoli', kind: 'extra', kcal: 70, p: 5, qty: '200 g' },
+  { id: 'queso', label: 'Queso fresco', kind: 'extra', kcal: 90, p: 11, qty: '100 g', tags: ['Sin lactosa'] },
+];
+const food = id => FOODS.find(f => f.id === id);
+
+class Component extends DCLogic {
+  state = {
+    screen: 'plan', step: 1,
+    edad: '28', peso: '78', altura: '180', sexo: 'h', act: 3, goal: 'ganar', ritmo: 2,
+    customGoal: '', kcalDelta: 0,
+    likes: ['pollo', 'arroz', 'huevos', 'aguacate', 'avena', 'yogur'],
+    dislikes: ['lentejas'], extraDislikes: [], diets: [],
+    draft: '', iaThinking: false,
+    chat: [
+      { role: 'ai', text: 'Soy tu nutricionista de bolsillo. Puedo cambiar tu plan, montarte comidas con lo que te gusta y esquivar lo que no soportas. Dime lo que necesites.' },
+    ],
+    scan: 'aim',
+    meals: [
+      { slot: 'Desayuno', name: 'Avena, plátano y whey', kcal: 520, macroText: '38 P · 72 C · 9 G' },
+      { slot: 'Comida', name: 'Salmón con quinoa', kcal: 640, macroText: '44 P · 55 C · 24 G' },
+      { slot: 'Snack', name: 'Yogur griego y nueces', kcal: 310, macroText: '24 P · 14 C · 17 G' },
+    ],
+  };
+
+  plan() {
+    const { edad, peso, altura, sexo, act, goal, ritmo } = this.state;
+    const p = +peso || 78, a = +altura || 180, e = +edad || 28;
+    const bmr = 10 * p + 6.25 * a - 5 * e + (sexo === 'h' ? 5 : -161);
+    const tdee = bmr * [1.2, 1.375, 1.55, 1.725, 1.9][this.state.act ?? 3];
+    const shift = (goal === 'perder' ? -1 : goal === 'ganar' ? 1 : 0) * (0.04 + ritmo * 0.035);
+    const kcal = Math.round((tdee * (1 + shift)) / 10) * 10 + this.state.kcalDelta;
+    const prot = Math.round(p * (goal === 'perder' ? 2.2 : 2.0));
+    const fat = Math.round((kcal * 0.25) / 9);
+    const carb = Math.max(0, Math.round((kcal - prot * 4 - fat * 9) / 4));
+    return { kcal, prot, fat, carb, act, tdee: Math.round(tdee) };
+  }
+
+  set = (k) => (ev) => this.setState({ [k]: ev.target.value });
+  go = (screen) => () => this.setState({ screen, scan: 'aim' });
+
+  shoot = () => {
+    this.setState({ scan: 'analyzing' });
+    this._t = setTimeout(() => this.setState({ scan: 'result' }), 1700);
+  };
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  addMeal = () => {
+    this.setState(s => ({
+      screen: 'hoy', scan: 'aim',
+      meals: s.meals.some(m => m.name === 'Pollo, arroz y aguacate') ? s.meals : [...s.meals,
+        { slot: 'Cena', name: 'Pollo, arroz y aguacate', kcal: 780, macroText: '58 P · 74 C · 22 G' }],
+    }));
+  };
+
+  next = () => {
+    const s = this.state;
+    if (s.step < 4) this.setState({ step: s.step + 1 });
+    else this.setState({ screen: 'hoy' });
+  };
+  back = () => this.setState(s => ({ step: Math.max(1, s.step - 1) }));
+
+  cycleFood = (id) => () => this.setState(s => {
+    const liked = s.likes.includes(id), disliked = s.dislikes.includes(id);
+    if (liked) return { likes: s.likes.filter(x => x !== id), dislikes: [...s.dislikes, id] };
+    if (disliked) return { dislikes: s.dislikes.filter(x => x !== id) };
+    return { likes: [...s.likes, id] };
+  });
+
+  toggleDiet = (d) => () => this.setState(s => ({
+    diets: s.diets.includes(d) ? s.diets.filter(x => x !== d) : [...s.diets, d],
+  }));
+
+  allowed(kind) {
+    const s = this.state;
+    const veg = s.diets.includes('Vegetariano');
+    return FOODS.filter(f => f.kind === kind
+      && !s.dislikes.includes(f.id)
+      && !(f.tags || []).some(t => s.diets.includes(t))
+      && !(veg && ['pollo', 'ternera', 'salmon', 'atun'].includes(f.id)));
+  }
+
+  buildMeal(slot, targetKcal) {
+    const s = this.state;
+    const rank = list => list.slice().sort((a, b) => (s.likes.indexOf(b.id)) - (s.likes.indexOf(a.id)))
+      .sort((a, b) => (s.likes.includes(b.id) ? 1 : 0) - (s.likes.includes(a.id) ? 1 : 0));
+    const prot = rank(this.allowed('prot'))[0];
+    const carb = rank(this.allowed('carb'))[0];
+    const extra = rank(this.allowed('extra'))[0];
+    const picks = [prot, carb, extra].filter(Boolean);
+    if (!picks.length) return null;
+    let kcal = picks.reduce((t, f) => t + f.kcal, 0);
+    let p = picks.reduce((t, f) => t + f.p, 0);
+    let scale = 1;
+    if (targetKcal) { scale = targetKcal / kcal; kcal = targetKcal; p = Math.round(p * scale); }
+    return {
+      slot,
+      name: picks.map(f => f.label).join(', ').replace(/,([^,]*)$/, ' y$1'),
+      kcal: Math.round(kcal / 5) * 5,
+      p: Math.round(p),
+      items: picks.map(f => f.label + ' · ' + (scale === 1 ? f.qty : Math.round(parseFloat(f.qty) * scale) + f.qty.replace(/^[\d.,]+/, ''))),
+    };
+  }
+
+  addProposal = (meal) => () => this.setState(s => ({
+    meals: [...s.meals, {
+      slot: meal.slot, name: meal.name, kcal: meal.kcal,
+      macroText: meal.p + ' P · ' + Math.round(meal.kcal * 0.4 / 4) + ' C · ' + Math.round(meal.kcal * 0.25 / 9) + ' G',
+    }],
+    chat: [...s.chat, { role: 'ai', text: 'Añadido. Te lo he metido en el diario de hoy.', change: 'Diario actualizado · ' + meal.kcal + ' kcal' }],
+  }));
+
+  submit = (text) => {
+    this.setState(s => ({ chat: [...s.chat, { role: 'user', text }], draft: '', iaThinking: true }));
+    this.ask(text);
+  };
+  send = () => { const t = this.state.draft.trim(); if (t) this.submit(t); };
+  setDraft = (ev) => this.setState({ draft: ev.target.value });
+  onKey = (ev) => { if (ev.key === 'Enter') this.send(); };
+  usePrompt = (text) => () => this.submit(text);
+
+  pushAI = (msg) => this.setState(s => ({ iaThinking: false, chat: [...s.chat, Object.assign({ role: 'ai' }, msg)] }));
+  pushCard = (msg) => this.setState(s => ({ chat: [...s.chat, Object.assign({ role: 'ai' }, msg)] }));
+
+  matchFood(name) {
+    const n = (name || '').toLowerCase().trim();
+    return FOODS.find(f => f.label.toLowerCase() === n || f.id === n)
+      || FOODS.find(f => n.includes(f.label.toLowerCase()) || f.label.toLowerCase().includes(n));
+  }
+
+  systemPrompt() {
+    const s = this.state, P = this.plan();
+    const label = { perder: 'perder grasa', mantener: 'mantener / recomposición', ganar: 'ganar masa muscular', custom: 'personalizado' }[s.goal];
+    return [
+      'Eres el asistente de nutrición de Kcal AI, una app de conteo de calorías para gente que entrena. Hablas español de España, en segunda persona, directo y sin paja. Máximo 3 frases por respuesta salvo que te pidan un plan.',
+      'Cuando el usuario pida un cambio en su plan, sus gustos o su diario, USA LAS HERRAMIENTAS en lugar de solo describirlo. Después confirma en una frase corta lo que has hecho.',
+      'No des consejo médico; si detectas un objetivo peligroso (deficit extremo, pérdida muy rápida), dilo con claridad y propón algo sensato.',
+      'Datos actuales del usuario:',
+      JSON.stringify({
+        edad: +s.edad, peso_kg: +s.peso, altura_cm: +s.altura, sexo: s.sexo === 'h' ? 'hombre' : 'mujer',
+        entrenos_semana: ['0-1', '2-3', '4', '5-6', '7+'][s.act],
+        objetivo: label, objetivo_personalizado: s.customGoal || null, ritmo: RITMOS[s.ritmo],
+        objetivo_diario: { kcal: P.kcal, proteina_g: P.prot, carbos_g: P.carb, grasas_g: P.fat },
+        gasto_estimado_kcal: P.tdee,
+        le_gusta: s.likes.map(id => (food(id) || {}).label).filter(Boolean),
+        no_soporta: s.dislikes.map(id => (food(id) || {}).label).filter(Boolean).concat(s.extraDislikes || []),
+        restricciones: s.diets,
+        comidas_de_hoy: s.meals.map(m => ({ momento: m.slot, nombre: m.name, kcal: m.kcal, macros: m.macroText })),
+        kcal_consumidas_hoy: s.meals.reduce((a, m) => a + m.kcal, 0),
+      }, null, 1),
+      'Alimentos que la app conoce con su ficha: ' + FOODS.map(f => f.label).join(', ') + '. Puedes proponer otros, pero da siempre kcal y proteína estimadas.',
+    ].join('\n\n');
+  }
+
+  tools() {
+    const P = () => this.plan();
+    const str = { type: 'string' }, num = { type: 'number' };
+    return [
+      {
+        name: 'ajustar_calorias',
+        description: 'Suma o resta calorías al objetivo diario del usuario. delta positivo sube, negativo baja.',
+        input_schema: { type: 'object', properties: { delta: num, motivo: str }, required: ['delta'] },
+        run: async ({ delta, motivo }) => {
+          this.setState(s => ({ kcalDelta: s.kcalDelta + delta }));
+          const nuevo = P().kcal + delta;
+          this.pushCard({ text: '', change: (delta > 0 ? '+' : '−') + Math.abs(delta) + ' kcal · objetivo ' + nuevo + ' kcal/día', silent: true });
+          return 'Objetivo diario ahora ' + nuevo + ' kcal. ' + (motivo || '');
+        },
+      },
+      {
+        name: 'excluir_alimento',
+        description: 'Marca un alimento como que el usuario no lo soporta. Nunca volverá a aparecer en sugerencias.',
+        input_schema: { type: 'object', properties: { alimento: str }, required: ['alimento'] },
+        run: async ({ alimento }) => {
+          const f = this.matchFood(alimento);
+          this.setState(s => f
+            ? { dislikes: s.dislikes.includes(f.id) ? s.dislikes : [...s.dislikes, f.id], likes: s.likes.filter(x => x !== f.id) }
+            : { extraDislikes: [...(s.extraDislikes || []), alimento] });
+          this.pushCard({ text: '', change: 'Excluido: ' + (f ? f.label : alimento), silent: true });
+          return 'Excluido ' + (f ? f.label : alimento) + ' del plan y de las sugerencias.';
+        },
+      },
+      {
+        name: 'marcar_favorito',
+        description: 'Marca un alimento como favorito del usuario para priorizarlo en las sugerencias.',
+        input_schema: { type: 'object', properties: { alimento: str }, required: ['alimento'] },
+        run: async ({ alimento }) => {
+          const f = this.matchFood(alimento);
+          if (!f) return 'Ese alimento no está en la lista de la app, pero lo tendré en cuenta en la conversación.';
+          this.setState(s => ({ likes: s.likes.includes(f.id) ? s.likes : [...s.likes, f.id], dislikes: s.dislikes.filter(x => x !== f.id) }));
+          this.pushCard({ text: '', change: 'Favorito: ' + f.label, silent: true });
+          return f.label + ' marcado como favorito.';
+        },
+      },
+      {
+        name: 'aplicar_restriccion',
+        description: 'Aplica una restricción alimentaria al plan completo. Valores válidos: ' + DIETS.join(', '),
+        input_schema: { type: 'object', properties: { restriccion: { type: 'string', enum: DIETS } }, required: ['restriccion'] },
+        run: async ({ restriccion }) => {
+          this.setState(s => ({ diets: s.diets.includes(restriccion) ? s.diets : [...s.diets, restriccion] }));
+          this.pushCard({ text: '', change: 'Restricción: ' + restriccion, silent: true });
+          return restriccion + ' aplicado a todo el plan.';
+        },
+      },
+      {
+        name: 'cambiar_objetivo',
+        description: 'Cambia el objetivo del usuario. Usa "custom" con descripcion cuando el objetivo sea propio del usuario.',
+        input_schema: {
+          type: 'object',
+          properties: { objetivo: { type: 'string', enum: ['perder', 'mantener', 'ganar', 'custom'] }, descripcion: str },
+          required: ['objetivo'],
+        },
+        run: async ({ objetivo, descripcion }) => {
+          this.setState({ goal: objetivo, customGoal: descripcion || '' });
+          const p = this.plan();
+          this.pushCard({ text: '', change: 'Objetivo actualizado · ' + p.kcal + ' kcal · ' + p.prot + ' g proteína', silent: true });
+          return 'Objetivo cambiado. Nuevo plan: ' + p.kcal + ' kcal, ' + p.prot + ' g de proteína.';
+        },
+      },
+      {
+        name: 'proponer_comida',
+        description: 'Muestra al usuario una tarjeta con una comida propuesta que puede añadir a su diario con un botón. Respeta sus exclusiones y restricciones.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            momento: { type: 'string', enum: ['Desayuno', 'Comida', 'Snack', 'Cena'] },
+            nombre: str, kcal: num, proteina_g: num,
+            ingredientes: { type: 'array', items: str, description: 'Ingrediente con cantidad, ej. "Pollo · 210 g"' },
+            nota: { type: 'string', description: 'Una frase que acompaña la tarjeta' },
+          },
+          required: ['momento', 'nombre', 'kcal', 'proteina_g', 'ingredientes'],
+        },
+        run: async ({ momento, nombre, kcal, proteina_g, ingredientes, nota }) => {
+          this.pushCard({ text: nota || momento + ' a tu medida:', meal: { slot: momento, name: nombre, kcal: Math.round(kcal), p: Math.round(proteina_g), items: ingredientes } });
+          return 'Tarjeta mostrada. No repitas los ingredientes en tu respuesta final; una frase basta.';
+        },
+      },
+      {
+        name: 'registrar_comida',
+        description: 'Añade directamente una comida al diario de hoy (solo si el usuario dice que ya se la ha comido).',
+        input_schema: {
+          type: 'object',
+          properties: { momento: str, nombre: str, kcal: num, proteina_g: num },
+          required: ['momento', 'nombre', 'kcal'],
+        },
+        run: async ({ momento, nombre, kcal, proteina_g }) => {
+          this.setState(s => ({
+            meals: [...s.meals, {
+              slot: momento, name: nombre, kcal: Math.round(kcal),
+              macroText: Math.round(proteina_g || kcal * 0.25 / 4) + ' P · ' + Math.round(kcal * 0.4 / 4) + ' C · ' + Math.round(kcal * 0.25 / 9) + ' G',
+            }],
+          }));
+          this.pushCard({ text: '', change: 'Diario actualizado · ' + Math.round(kcal) + ' kcal', silent: true });
+          const eaten = this.state.meals.reduce((a, m) => a + m.kcal, 0) + Math.round(kcal);
+          return 'Registrado. Te quedan ' + Math.max(0, P().kcal - eaten) + ' kcal hoy.';
+        },
+      },
+    ];
+  }
+
+  async ask(text) {
+    if (!(window.claude && window.claude.complete)) {
+      this.pushAI({ text: 'No encuentro la conexión con el modelo en este entorno. Ábrelo en la vista previa de la app y vuelve a intentarlo.' });
+      return;
+    }
+    const history = this.state.chat
+      .filter(m => m.text && !m.silent)
+      .slice(-12)
+      .map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text }));
+    if (!history.length || history[history.length - 1].content !== text) history.push({ role: 'user', content: text });
+    try {
+      const out = await window.claude.complete({
+        model: 'claude-sonnet-4-5',
+        system: this.systemPrompt(),
+        messages: history,
+        tools: this.tools(),
+        max_tokens: 900,
+      });
+      this.pushAI({ text: (out || '').trim() || 'Hecho.' });
+    } catch (err) {
+      this.pushAI({ text: 'Se ha cortado la conexión con el modelo: ' + (err && err.message ? err.message : err) + '. Inténtalo otra vez.' });
+    }
+  }
+
+
+
+  renderVals() {
+    const s = this.state, P = this.plan();
+    const consumido = s.meals.reduce((t, m) => t + m.kcal, 0);
+    const restante = Math.max(0, P.kcal - consumido);
+    const pctK = Math.min(1, consumido / P.kcal);
+    const C = 2 * Math.PI * 52;
+
+    const eatenP = s.meals.reduce((t, m) => t + parseInt(m.macroText, 10), 0);
+    const eatenC = Math.round(consumido * 0.42 / 4);
+    const eatenG = Math.round(consumido * 0.26 / 9);
+    const macro = (label, eaten, goal) => ({
+      label, text: eaten + ' / ' + goal + ' g',
+      pct: Math.min(100, Math.round(eaten / goal * 100)) + '%',
+    });
+
+    const kcalWeek = [3120, 3290, 2980, 3410, 3180, 3620, consumido];
+    const dias = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    const maxBar = Math.max(P.kcal * 1.15, ...kcalWeek);
+    const bars = kcalWeek.map((v, i) => ({
+      day: dias[i], h: Math.round(v / maxBar * 100) + '%',
+      fill: i === 6 ? LIME : '#111',
+    }));
+
+    const weights = [76.4, 76.6, 76.9, 77.1, 77.0, 77.4, 77.8, (+s.peso || 78)];
+    const wMin = 75.5, wMax = 79.5;
+    const y = w => 112 - ((w - wMin) / (wMax - wMin)) * 100;
+    const line = weights.map((w, i) => (i * (300 / 7)).toFixed(1) + ',' + y(w).toFixed(1)).join(' ');
+
+    const goalOpts = [
+      { id: 'perder', label: 'Perder grasa', note: 'Déficit controlado, proteína alta para conservar músculo' },
+      { id: 'mantener', label: 'Mantener', note: 'Recomposición: mismas calorías, más proteína' },
+      { id: 'ganar', label: 'Ganar masa muscular', note: 'Superávit ajustado al volumen de entrenamiento' },
+      { id: 'custom', label: 'Personalizado', note: 'Escríbelo con tus palabras y la IA lo traduce a números' },
+    ];
+    const actLabels = ['0–1', '2–3', '4', '5–6', '7+'];
+
+    const tab = (id, label) => ({
+      label, pick: this.go(id),
+      color: s.screen === id ? '#111' : '#a0a0a5',
+      dot: s.screen === id ? LIME : 'transparent',
+    });
+
+    const excluded = s.dislikes.map(id => (food(id) || {}).label).filter(Boolean).concat(s.extraDislikes || []);
+    const liked = s.likes.map(id => (food(id) || {}).label).filter(Boolean);
+    const goalNote = {
+      perder: 'Déficit de ' + Math.abs(P.kcal - P.tdee) + ' kcal sobre tu gasto estimado (' + P.tdee + ' kcal). Proteína a 2,2 g por kilo para proteger la masa magra.',
+      mantener: 'Calorías de mantenimiento sobre un gasto estimado de ' + P.tdee + ' kcal. Prioriza proteína y entrenamiento de fuerza.',
+      ganar: 'Superávit de ' + Math.abs(P.kcal - P.tdee) + ' kcal sobre tu gasto estimado (' + P.tdee + ' kcal), con la proteína a 2 g por kilo.',
+      custom: (s.customGoal ? '“' + s.customGoal + '”. ' : '') + 'Traducido a ' + P.kcal + ' kcal sobre un gasto estimado de ' + P.tdee + ' kcal, con la proteína alta. Puedes pedirme cambios en cualquier momento desde el asistente.',
+    }[s.goal];
+
+    return {
+      isPlan: s.screen === 'plan', isHoy: s.screen === 'hoy', isScan: s.screen === 'scan',
+      isDiario: s.screen === 'diario', isProgreso: s.screen === 'progreso',
+      goPlan: () => this.setState({ screen: 'plan', step: 1 }),
+      goHoy: this.go('hoy'), goScan: this.go('scan'), goProgreso: this.go('progreso'),
+
+      isStep1: s.step === 1, isStep2: s.step === 2, isStep3: s.step === 3, isStep4: s.step === 4,
+      stepLabel: s.step + ' de 4',
+      step2Bar: s.step >= 2 ? '#111' : '#e9e9ec',
+      step3Bar: s.step >= 3 ? '#111' : '#e9e9ec',
+      step4Bar: s.step >= 4 ? '#111' : '#e9e9ec',
+      canBack: s.step > 1,
+      next: this.next, back: this.back,
+      nextLabel: s.step === 4 ? 'Empezar a contar' : 'Continuar',
+
+      isCustomGoal: s.goal === 'custom',
+      customGoal: s.customGoal,
+      setCustomGoal: this.set('customGoal'),
+      foodChips: FOODS.map(f => {
+        const like = s.likes.includes(f.id), no = s.dislikes.includes(f.id);
+        return {
+          label: f.label, cycle: this.cycleFood(f.id),
+          border: like ? '#111' : no ? '#c9c9ce' : '#e2e2e6',
+          bg: like ? LIME : no ? '#f0f0f3' : '#fff',
+          fg: no ? '#a0a0a5' : '#111',
+          strike: no ? 'line-through' : 'none',
+        };
+      }),
+      dietChips: DIETS.map(d => ({
+        label: d, toggle: this.toggleDiet(d),
+        border: s.diets.includes(d) ? '#111' : '#e2e2e6',
+        bg: s.diets.includes(d) ? LIME : '#fff',
+      })),
+      gustosResumen: (liked.length ? 'Priorizo ' + liked.slice(0, 4).join(', ').toLowerCase() + (liked.length > 4 ? ' y ' + (liked.length - 4) + ' más' : '') + '. ' : '')
+        + (excluded.length ? 'Nunca te sugeriré ' + excluded.join(', ').toLowerCase() + '.' : 'No has excluido nada todavía.')
+        + (s.diets.length ? ' ' + s.diets.join(' · ') + '.' : ''),
+
+      edad: s.edad, peso: s.peso, altura: s.altura,
+      setEdad: this.set('edad'), setPeso: this.set('peso'), setAltura: this.set('altura'),
+      setHombre: () => this.setState({ sexo: 'h' }), setMujer: () => this.setState({ sexo: 'm' }),
+      sexoHBorder: s.sexo === 'h' ? '#111' : '#dcdce1', sexoHBg: s.sexo === 'h' ? LIME : '#fff',
+      sexoMBorder: s.sexo === 'm' ? '#111' : '#dcdce1', sexoMBg: s.sexo === 'm' ? LIME : '#fff',
+      actOptions: actLabels.map((label, i) => ({
+        label, pick: () => this.setState({ act: i }),
+        border: s.act === i ? '#111' : '#dcdce1', bg: s.act === i ? LIME : '#fff',
+      })),
+      goalOptions: goalOpts.map(g => ({
+        label: g.label, note: g.note, pick: () => this.setState({ goal: g.id }),
+        border: s.goal === g.id ? '#111' : '#e4e4e8', bg: s.goal === g.id ? LIME : '#fff',
+      })),
+      ritmo: s.ritmo, setRitmo: (ev) => this.setState({ ritmo: +ev.target.value }),
+      ritmoLabel: RITMOS[s.ritmo],
+
+      planKcal: P.kcal.toLocaleString('es-ES'), planP: P.prot, planC: P.carb, planG: P.fat,
+      planNota: goalNote,
+
+      ringOffset: (C * (1 - pctK)).toFixed(1),
+      restante: restante.toLocaleString('es-ES'),
+      consumido: consumido.toLocaleString('es-ES'),
+      meals: s.meals,
+      macros: [macro('Proteína', eatenP, P.prot), macro('Carbos', eatenC, P.carb), macro('Grasas', eatenG, P.fat)],
+      tabs: [tab('hoy', 'Hoy'), tab('diario', 'Diario'), tab('ia', 'IA'), tab('progreso', 'Progreso')],
+
+      isIA: s.screen === 'ia', goIA: this.go('ia'),
+      hoyNudge: 'Te faltan ' + Math.max(0, P.prot - eatenP) + ' g de proteína y ' + restante + ' kcal'
+        + (excluded.length ? ', sin ' + excluded.join(' ni ').toLowerCase() : '') + '.',
+      iaThinking: s.iaThinking,
+      draft: s.draft, setDraft: this.setDraft, onKey: this.onKey, send: this.send,
+      prompts: [
+        { label: 'Súbeme 200 kcal', pick: this.usePrompt('Súbeme 200 kcal') },
+        { label: 'Dame una cena de 700 kcal', pick: this.usePrompt('Dame una cena de 700 kcal') },
+        { label: 'No soporto el brócoli', pick: this.usePrompt('No soporto el brócoli') },
+        { label: '¿Cuánta proteína me falta?', pick: this.usePrompt('¿Cuánta proteína me falta?') },
+        { label: 'Soy intolerante a la lactosa', pick: this.usePrompt('Soy intolerante a la lactosa') },
+      ],
+      chat: s.chat.map((m, i) => ({
+        text: m.text, hasText: !!m.text,
+        align: m.role === 'user' ? 'flex-end' : 'flex-start',
+        bg: m.role === 'user' ? '#111' : '#f4f4f6',
+        fg: m.role === 'user' ? '#fff' : '#111',
+        radius: m.role === 'user' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
+        isMeal: !!m.meal, isChange: !!m.change, changeText: m.change,
+        mealName: m.meal && m.meal.name, mealKcal: m.meal && m.meal.kcal,
+        mealItems: m.meal ? m.meal.items : [],
+        mealMacros: m.meal ? m.meal.p + ' g de proteína · ' + m.meal.slot.toLowerCase() : '',
+        add: m.meal ? this.addProposal(m.meal) : null,
+      })),
+
+      isAim: s.scan === 'aim', isAnalyzing: s.scan === 'analyzing', isResult: s.scan === 'result',
+      scanTitle: s.scan === 'analyzing' ? 'Analizando…' : s.scan === 'result' ? 'Resultado' : 'Escanear comida',
+      shoot: this.shoot, retry: () => this.setState({ scan: 'aim' }), addMeal: this.addMeal,
+      detected: [{ label: 'Proteína', value: '58 g' }, { label: 'Carbos', value: '74 g' }, { label: 'Grasas', value: '22 g' }],
+      items: [
+        { name: 'Pechuga de pollo a la plancha', qty: '210 g' },
+        { name: 'Arroz blanco cocido', qty: '180 g' },
+        { name: 'Aguacate', qty: '½ pieza' },
+      ],
+
+      week: dias.map((day, i) => ({
+        day, num: 25 + i,
+        bg: i === 6 ? '#111' : i < 6 ? '#f0f0f3' : '#fff',
+        fg: i === 6 ? '#fff' : '#111',
+      })),
+      history: [
+        { title: 'Domingo 30', delta: '+440 kcal', deltaColor: '#8a8a8f', rows: [
+          { name: 'Tortilla de claras y avena', meta: 'Desayuno · 42 P', kcal: 480 },
+          { name: 'Ternera con boniato', meta: 'Comida · 52 P', kcal: 810 },
+          { name: 'Batido post-entreno', meta: 'Snack · 30 P', kcal: 260 },
+        ] },
+        { title: 'Sábado 29', delta: '−120 kcal', deltaColor: '#8a8a8f', rows: [
+          { name: 'Bowl de yogur y frutos rojos', meta: 'Desayuno · 28 P', kcal: 390 },
+          { name: 'Pasta con atún', meta: 'Comida · 46 P', kcal: 720 },
+        ] },
+      ],
+      bars, targetLine: Math.round(P.kcal / maxBar * 100) + '%',
+      stats: [
+        { label: 'Media diaria', value: Math.round(kcalWeek.reduce((a, b) => a + b, 0) / 7).toLocaleString('es-ES'), note: 'kcal · últimos 7 días' },
+        { label: 'Proteína media', value: '168 g', note: '2,15 g por kilo' },
+      ],
+      weightLine: line,
+      weightArea: '0,120 ' + line + ' 300,120',
+      aiNota: 'Llevas tres semanas subiendo 0,35 kg por semana con la proteína cumplida al 94%. Puedo subir 90 kcal de carbohidratos en los días de entrenamiento de pierna.',
+    };
+  }
+}
+</script>
+</body>
+</html>
